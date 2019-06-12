@@ -1,0 +1,1 @@
+JikesRVM can automatically download these files but several times I have noticed that it fail to do so and then the only workaround is to do it manually. To avoid this diffculty, all required supported jar files are supplied herewith.

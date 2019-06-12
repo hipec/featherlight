@@ -1,0 +1,8 @@
+<project name="workstealing" basedir=".">
+        <!--
+                SET THE PATHS BELOW RELATIVE TO HOME DIRECTORY ONLY !!
+        <property name="jikesrvm-path" value="/mnt/hdd2/home/vivekk/speculative/jikesrvm/JikesRVM/dist/production_ws/jksvm.jar"/>
+        -->
+	<property environment="env"/>
+	<property name="jikesrvm-path" value="${env.JIKESRVM}/jksvm.jar"/>
+</project>

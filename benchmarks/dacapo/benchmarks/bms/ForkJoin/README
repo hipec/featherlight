@@ -1,0 +1,5 @@
+=====================
+To Run:
+=====================
+export JIKES=/mnt/hdd2/home/vivekk/speculative/jikesrvm/JikesRVM/dist/production_ws
+$JIKES/rvm  -Xms3G -X:gc:variableSizeHeap=false -Xws:pinAuto=true -X:gc:threads=1 -X:vmClasses=$JIKES/jksvm.jar:$JIKES/rvmrt.jar:$JIKES/../../../benchmarks/dacapo/benchmarks/bms/flavors/forkjoin/jsr166y.jar -jar dacapo.jar -c org.dacapo.harness.EuroPAR19 -n 6 lusearch-fix -t 20

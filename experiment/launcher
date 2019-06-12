@@ -1,0 +1,148 @@
+#!/usr/bin/perl
+require "getopts.pl";
+&Getopts('ms');
+
+####################################################################
+################### CHANGES ALLOWED BELOW THIS #####################
+####################################################################
+
+my $benchmark = $ARGV[0];
+my $benchmarkargs = $ARGV[1];
+my $logdir = $ARGV[2];
+my $benchmarkdir = $ARGV[3];
+my $timeout = $ARGV[4];
+my $threads = $ARGV[5];
+my $config = $ARGV[6];
+my $jikesrvm = $ARGV[7];
+my $tempfilename = $ARGV[8];
+my $maxinvocations =  $ARGV[9];
+my $prefix = $ARGV[10];
+my $rvmargs = $ARGV[11];
+
+#my $gcthreads = $threads;
+my $gcthreads = 1;
+my $MAX_TRY = 5;
+
+####################################################################
+################### NO CHANGES ALLOWED BELOW THIS ##################
+####################################################################
+
+
+my $debug = 0;
+
+if($debug == 1) {
+	print "The ARGS passed are:\n";
+	print "Benchmark = $benchmark\n";
+	print "BenchmarkArgs = $benchmarkargs\n";
+	print "LogDir = $logdir \n";
+	print "BenchmarkDir = $benchmarkdir \n";
+	print "Timeout = $timeout \n";
+	print "Threads = $threads \n";
+	print "ConfigName = $config \n";
+	print "JikesRVM = $jikesrvm \n";
+	print "TempFileName= $tempfilename \n";
+	print "RVMArgs = $rvmargs \n";
+}
+
+print STDERR "$benchmark ... ";
+
+system("mkdir -p $logdir");
+my $finallog = $logdir . "/" . $prefix . ".3096.1024." . $config . ".threads-" . $threads . ".log"; 
+open(MAINFILE, ">$finallog") or die "$finallog not opened";
+
+system("mkdir -p tmp");
+my $pwd = `pwd`;
+chomp($pwd);
+my $tmplog = $pwd . "/tmp/$tempfilename";
+if($jikesrvm =~ /jdk/) {
+	# Do nothing
+}
+else {
+	$rvmargs = " -Xms3G -X:gc:variableSizeHeap=false -X:gc:threads=1 " . $rvmargs;
+}
+if ($rvmargs =~ /x10.dist/) {
+	$benchmark = "$benchmark\\\$\\\$Main";	
+}
+my $cfg = "$jikesrvm $rvmargs $benchmark $benchmarkargs" ;
+
+for ($i = 0; $i < $maxinvocations; $i++) {
+    	print STDERR "$i";
+	for ($j = 0; $j < $MAX_TRY; $j++) {
+		my $success = 0;
+     	   	runnit($timeout, $benchmarkdir, $cfg, $tmplog, $debug);
+       	   	open (FOO, "tail -30 $tmplog | egrep 'PASSED\|Finished' |");
+        	$_ = <FOO>;
+        	if (/Finished/ || /PASSED/) {
+                	print STDERR "d";
+			# Append to the final log file
+			$success = 1;
+        	} else {
+                	print STDERR "_";
+        	}
+        	close FOO;
+		if($success == 1) {
+			open(TMPLOG, $tmplog);
+			my @this_log =  <TMPLOG>;
+			close TMPLOG;
+			print MAINFILE @this_log;
+			last;
+		}
+	}
+}
+print "\n";
+close MAINFILE;
+
+#
+# Finally, move all of the results to the results directory
+#
+
+my $finalfile = "$finallog.gz";
+system("rm -f $finalfile 2>/dev/null");
+system("gzip $finallog");
+exit();
+
+#####################################################################
+
+sub runnit {
+
+     	my ($timeout, $benchmarkdir, $cfg, $tmplog, $debug) = @_;
+
+	my $pwd = `pwd`;
+	chomp($pwd);
+	$cmdline = $pwd .  "/timedrun -t " . $timeout;
+
+	$job = "mkdir -p $benchmarkdir 2>/dev/null; cd $benchmarkdir; $cmdline $cfg";
+
+	if($debug == 1) {
+		print "\n JOBS IS: $job \n";
+		exit();
+	}
+
+	open (STATSLOG, ">$tmplog");
+    	print STATSLOG "\n-----\n$job\n";
+    	close STATSLOG;
+
+	# sanity checks
+	system("echo -n 'OS: ' >> $tmplog");  system("uname -a >> $tmplog");
+    	system("echo -n 'cpu: ' >> $tmplog"); system("cat /proc/cpuinfo | grep 'model name' | head -1 >> $tmplog");
+    	system("echo -n 'number of cores: ' >> $tmplog"); system("cat /proc/cpuinfo | grep MHz | wc -l >> $tmplog");
+    	if ($cpuidmask ne "" || $taskselmask ne "" || $cpufreq ne "") {
+        	system("echo 'using cpuidmask: $cpuidmask, taskselmask: $taskselmask ' >> $tmplog");
+        	for ($cpunum = 0; $cpunum < 2; $cpunum++) {
+            		system("echo -n 'enabling of cpu ".$cpunum.": ' >> $tmplog");
+            		if ($cpunum) {
+                		system("cat /sys/devices/system/cpu/cpu".$cpunum."/online >> $tmplog");
+            		}
+            		# print out cpu speed for each cpu (just do 0 through 8 to cover all machines)
+            		system("echo -n 'Frequency of cpu ".$cpunum.": ' >> $tmplog");
+            		system("cat /sys/devices/system/cpu/cpu".$cpunum."/cpufreq/scaling_cur_freq >> $tmplog");
+            		system("echo -n 'Governor of cpu ".$cpunum.": ' >> $tmplog");
+            		system("cat /sys/devices/system/cpu/cpu".$cpunum."/cpufreq/scaling_governor >> $tmplog");
+            		system("echo -n 'Scaling_min_freq of cpu ".$cpunum.": ' >> $tmplog");
+            		system("cat /sys/devices/system/cpu/cpu".$cpunum."/cpufreq/scaling_min_freq >> $tmplog");
+        	}
+   	}
+
+    	system("$job >> $tmplog 2>&1");
+    	#system("cat $tmpfile >> $tmplog");
+}
