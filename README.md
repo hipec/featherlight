@@ -1,4 +1,4 @@
-This is the software implementation of Featherlight programming model for speculative task parallelism.
+This is the software implementation of Featherlight programming model for speculative task parallelism. Instructions on using this software is provided in the file ``guide.pdf''.
 
 You may use this software for your research. This software is still evolving at IIIT Delhi. Whenever there is any enhancement or bug fixes, this download page will be updated. Please cite the following papers while using this software for any publications:
 
